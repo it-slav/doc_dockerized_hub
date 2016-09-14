@@ -1,0 +1,152 @@
+[![Build Status](https://www.blackducksoftware.com/sites/default/files/images/Security-Checker-Hero_0.jpg)](http://www2.blackducksoftware.com/products/hub)
+
+
+### Introduction
+This image contains fully functioning Black Duck Hub server software. 
+
+Use this image to scan any file system to see if it contains vulnerabilities, the open source licenses used, and the operational risks.
+
+Get your license [here](http://info.blackducksoftware.com/Hub-Free-Trial.html)
+
+
+
+### Getting Started
+
+##### Interactive Mode
+console
+$ docker run -ti -h $(hostname) --name=hub -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+
+##### Detached Mode
+console
+$ docker run -d -h $(hostname) --name=hub -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+Make sure that at a minimum port 8080 is not blocked.
+
+##### Notes 
+- Once started you can connect with your browser on port 8080.
+- The Hub will request a key; enter the key you received from Black Duck Software.
+- This version is not capable of persisting data. Once the container is stopped, the BOMs are no longer available.
+
+### Instructions for running with Docker Toolbox
+
+These instructions create a docker-machine with the name dockerDemo.
+
+1. Start a Mac terminal window or in Windows, open a command prompt.
+2. It depends on your system, but the following command creates a docker-machine with 12GB RAM (which is recommended for the Hub), 4 CPUs, and 20GB disk: 
+console
+$ docker-machine create -d virtualbox --virtualbox-disk-size "20000" --virtualbox-cpu-count "4" --virtualbox-memory "12288" dockerDemo
+
+4. Once the docker-machine is started, initialize your shell with the following command so that Docker works in the Docker Toolbox:
+Mac: 
+console
+$ eval $(docker-machine env dockerDemo)
+
+Windows: 
+console
+FOR /f "tokens=*" %i IN ('docker-machine env --shell cmd dockerDemo') DO %i
+
+6. Execute the following command for port forwarding on the virtual box so that it is accessible. 
+Mac:
+console
+ $ VBoxManage controlvm dockerDemo natpf1 "http,tcp,,8080,,8080"
+
+console
+ $ VBoxManage controlvm dockerDemo natpf1 "glu,tcp,,7081,,7081"
+
+Windows:
+console
+"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" controlvm dockerDemo natpf1 "http,tcp,,8080,,8080"
+
+console
+"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" controlvm dockerDemo natpf1 "glu,tcp,,7081,,7081"
+
+7. Download the Hub image: docker pull blackducksoftware/hub
+8. Start the Hub. If you want to see what is occurring, start the Hub with -ti option:
+ Mac :
+console
+ $ docker run -ti -h $(hostname) --name=hub --volumes-from hub -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+Windows:
+console
+         docker run -ti -h %COMPUTERNAME% --name=hub --volumes-from hub -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+ 
+9. After a few minutes you can follow the startup by opening a browser and entering the following URL: http://localhost:7081
+10. Select the top URL which connects you to the GLU console.
+11. Type: admin, admin
+12. Select Deployments from the options located at the top of the console. This displays what applications are starting. 
+13. Once started, you can connect to the Hub by typing the following URL: http://localhost:8080
+14. Log in to the Hub by entering the username: sysadmin and password : blackduck
+
+After you log in, a page appears where you can enter the key you got from Black Duck software.
+
+### Persisting the BOM (Bill of Material) Reports and License Key
+
+To persist the data we first have to create a data container.This is accomplished by executing the following command:
+ 
+console
+ $ docker run -v /var/lib/blckdck/hub  -v /opt/blackduck/hub/config --name hub_data blackducksoftware/hub true
+##### Note
+The /var/lib/blckdck/hub contains the BOM and /opt/blackduck/hub/config contains license data, it is possible to create seperate containers for them if needed, see docker command.
+
+Using the "docker ps -a" option you will see there is a stopped container: hub_data.
+
+Now start the Hub with the --volumes-from option to mount the data container volume in this volume.
+
+console
+$ docker run -ti  -h $(hostname) --volumes-from hub_data --name=hub --rm -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+In Detached Mode:
+
+console
+$ docker run -d  -h $(hostname) --volumes-from hub_data --name=hub --rm -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+To scan you can run the following commands:
+console
+$ docker pull blackducksoftware/hub_scanner
+
+
+console
+$ docker run -ti -h $(hostname) -v /var/run/docker.sock:/var/run/docker.sock --rm blackducksoftware/hub_scanner /scanner -h <ip address of your machine>   -p <port nr> -s [http|https] -u <username> -i <image name>
+
+For example:
+
+console
+ $ docker run -ti -h $(hostname) -v /var/run/docker.sock:/var/run/docker.sock --rm blackducksoftware/hub_scanner /scanner -h 192.168.178.15 -p 8080 -s http -u sysadmin -i debian:latest
+
+### Upgrading Black Duck Hub and persist the data
+
+To upgrade a running container and persist the data, a data volume must have been used see above "Persisting the BOM".
+The steps are
+1. Stop the running container with persistent storage
+2. Upgrade 
+3. Start the container using the same persistent storage. The Black Duck hub will discover that the DB schema is outdated and will automatically upgrade the DB.
+
+To stop the running container
+
+console 
+$ docker stop hub
+
+To upgrade to docker container:
+
+console
+$ docker pull blackducksoftware/hub
+
+Now start the Hub with the --volumes-from option to mount the data container volume in this volume.
+
+console
+$ docker run -ti  -h $(hostname) --volumes-from hub_data --name=hub --rm -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+In Detached Mode:
+
+console
+$ docker run -d  -h $(hostname) --volumes-from hub_data --name=hub --rm -p 4181:4181 -p 8080:8080 -p 7081:7081 -p 55436:55436 -p 8009:8009 -p 8993:8993 -p 8909:8909 blackducksoftware/hub
+
+
+##### Note
+Keep in mind that when you remove the hub_data container, you will remove your reports.
