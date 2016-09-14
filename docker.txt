@@ -1,6 +1,3 @@
-[![Build Status](https://www.blackducksoftware.com/sites/default/files/images/Security-Checker-Hero_0.jpg)](http://www2.blackducksoftware.com/products/hub)
-
-
 ### Introduction
 This image contains fully functioning Black Duck Hub server software. 
 
